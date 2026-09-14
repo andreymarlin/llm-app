@@ -41,8 +41,8 @@
 - На Intel-маке модель работает **на CPU** (GPU-ускорение Metal доступно только
   на Apple Silicon). 7B-модель отвечает медленнее, чем на «маках с M1+», но для
   диалога это комфортно. Если хочется быстрее — поставьте 3B-модель (см. раздел 7).
-- Нужно **~15 ГБ свободного места**: модель ~4.7 ГБ + Homebrew + виртуальное окружение.
-- macOS 12 (Monterey) или новее.
+- Нужно **~7 ГБ свободного места**: модель ~4.7 ГБ + бинарник llama.cpp + виртуальное окружение.
+- macOS 13.3 (Ventura) или новее — этого требует готовый бинарник llama.cpp.
 - Для первой установки потребуется интернет.
 
 ---
@@ -58,19 +58,13 @@ chmod +x setup.sh run.sh
 
 `setup.sh` сам:
 1. Проверит/установит Python 3 (через Command Line Tools).
-2. Установит Homebrew (если его нет).
-3. Установит `llama.cpp` (даёт `llama-server`).
-4. Скачает модель `Qwen2.5-7B-Instruct-Q4_K_M.gguf` (~4.7 ГБ) в `~/realtor-ai-app/models/`.
-5. Создаст `server/.env` с настройками.
+2. Скачает готовый бинарник `llama-server` (llama.cpp) с GitHub Releases —
+   **Homebrew не нужен** (на Intel-маках Homebrew больше не поддерживается).
+3. Скачает модель `Qwen2.5-7B-Instruct-Q4_K_M.gguf` (~4.7 ГБ) в `~/realtor-ai-app/models/`.
+4. Создаст `server/.env` с настройками.
 
 > Если скрипт попросит установить Command Line Tools — нажмите «Установить»,
 > дождитесь окончания и запустите `./setup.sh` ещё раз.
-
-### Что делать, если Homebrew уже установлен, а llama.cpp — нет
-
-```bash
-brew install llama.cpp
-```
 
 ---
 
@@ -138,6 +132,7 @@ brew install llama.cpp
 | `ANALYST_MODEL` | `qwen2.5-7b-instruct` | Модель для аналитика |
 | `STATE_DIR` | `~/realtor-ai-app/state` | Где хранится база |
 | `LOCAL_GGUF_PATH` | путь до модели | Файл GGUF для автозапуска `llama-server` |
+| `LLAMA_SERVER_PATH` | `~/realtor-ai-app/bin/llama-server` | Путь к бинарнику `llama-server` |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Адрес веб-интерфейса |
 
 ---
@@ -174,7 +169,7 @@ brew install llama.cpp
 
 **Ollama** (только Apple Silicon, на Intel Mac не поддерживается):
 ```bash
-brew install ollama
+# установщик с https://ollama.com/download, затем:
 ollama pull qwen2.5:7b-instruct
 ollama serve
 ```
@@ -190,7 +185,9 @@ ollama serve
 | Ошибка `model not found` | Имя модели в `server/.env` не совпадает с `--alias` / id модели на сервере |
 | Ответы идут очень долго | Это нормально для CPU. Уменьшите `LLM_CTX_SIZE` (напр. 4096) или возьмите 3B-модель |
 | Порт 8000 занят | Поменяйте `PORT` в `server/.env` |
-| `ensurepip is not available` при первом запуске | Системный Python не умеет создавать venv. Поставьте Homebrew-Python: `brew install python@3.12` и запустите `./setup.sh` ещё раз |
+| `ensurepip is not available` при первом запуске | Системный Python не умеет создавать venv. Установите Python 3.12 с https://www.python.org/downloads/ (установщик для macOS) и запустите `./setup.sh` ещё раз |
+| `Homebrew on macOS is only supported on Apple Silicon` | Ожидаемо на Intel-маке — Homebrew больше не поддерживает Intel. Скрипт уже не использует Homebrew: запустите обновлённый `./setup.sh` |
+| `llama-server` не запускается / `Bad CPU type` / «несовместимо с этой версией macOS» | macOS старее 13.3 (Ventura). Обновите macOS или соберите llama.cpp из исходников (ссылка есть в сообщении `setup.sh`) |
 | `bash: ./run.sh: bad interpreter` | Файл скрипта пересохранён с Windows-переводами строк. Выполните в проекте `sed -i '' 's/\r$//' run.sh setup.sh` (на macOS) |
 | Хочу посмотреть логи модели | `tail -f ~/realtor-ai-app/state/llama-server.log` |
 

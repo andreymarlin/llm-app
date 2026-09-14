@@ -53,6 +53,9 @@ mkdir -p "$STATE_DIR"
 LLM_PORT=$(printf '%s' "$BASE_URL" | sed -nE 's#^https?://[^:/]+:([0-9]+).*#\1#p')
 [ -z "$LLM_PORT" ] && LLM_PORT=8080
 
+# ---- path to the llama-server binary (set by setup.sh in server/.env) ----
+LLAMA_SERVER="${LLAMA_SERVER_PATH:-llama-server}"
+
 # ---- ensure the LLM server is reachable ----
 llm_reachable() {
   curl -fsS --max-time 5 "$BASE_URL/models" >/dev/null 2>&1
@@ -60,10 +63,11 @@ llm_reachable() {
 
 if ! llm_reachable; then
   if [ -n "${LOCAL_GGUF_PATH:-}" ] && [ -f "$LOCAL_GGUF_PATH" ] \
-     && command -v llama-server >/dev/null 2>&1; then
+     && command -v "$LLAMA_SERVER" >/dev/null 2>&1; then
     echo "==> LLM-сервер недоступен. Автозапуск llama-server:"
+    echo "    бинарник: $LLAMA_SERVER"
     echo "    модель: $LOCAL_GGUF_PATH"
-    nohup llama-server \
+    nohup "$LLAMA_SERVER" \
       --model "$LOCAL_GGUF_PATH" \
       --alias "${REALTOR_MODEL:-qwen2.5-7b-instruct}" \
       --host 127.0.0.1 \
