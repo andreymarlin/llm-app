@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local config and data (keep prompts/models out of version control)
+server/.env
+models/
+state/
+*.db
+*.db-wal
+*.db-shm
+
+# macOS
+.DS_Store
+
+# Logs
+*.log

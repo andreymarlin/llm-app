@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtor AI Assistant</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- ===================== Sidebar ===================== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>ИИ-риелтор</h1>
+        <div class="status">
+          <span id="status-dot" class="dot"></span>
+          <span id="status-text">Проверка…</span>
+        </div>
+      </div>
+
+      <div id="agent-cards" class="agent-cards"></div>
+
+      <div class="chat-list-head">
+        <span>Чат-сессии</span>
+        <button id="refresh-btn" class="icon-btn" title="Обновить списки">⟳</button>
+      </div>
+      <div id="chat-list" class="chat-list"></div>
+
+      <div class="sidebar-footer">
+        <button id="export-btn" class="btn small">Экспорт данных (JSON)</button>
+      </div>
+    </aside>
+
+    <!-- ===================== Main ===================== -->
+    <main class="main">
+      <header class="chat-header">
+        <div class="chat-heading">
+          <h2 id="chat-title">Выберите сессию</h2>
+          <span id="chat-agent" class="chat-agent"></span>
+        </div>
+        <div id="context-wrap" class="context-wrap" style="display:none">
+          <label for="context-select">Анализировать чат:</label>
+          <select id="context-select">
+            <option value="">— без контекста —</option>
+          </select>
+        </div>
+      </header>
+
+      <div id="messages" class="messages">
+        <div class="placeholder">
+          Создайте или выберите чат-сессию слева, чтобы начать.<br />
+          Для аналитика выберите чат риелтора в выпадающем списке сверху — аналитик получит его стенограмму.
+        </div>
+      </div>
+
+      <div class="composer">
+        <textarea id="composer" rows="1" placeholder="Напишите сообщение…"></textarea>
+        <button id="send-btn" class="btn primary">Отправить</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== Settings modal ===================== -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-body">
+      <h3>Настройки агента</h3>
+      <label>Имя агента</label>
+      <input id="set-name" type="text" />
+
+      <label>Модель (выберите из списка или впишите свой id)</label>
+      <input id="set-model" type="text" list="models-list" />
+      <datalist id="models-list"></datalist>
+
+      <label>Температура: <span id="temp-value">0.7</span></label>
+      <input id="set-temperature" type="range" min="0" max="2" step="0.1" value="0.7" />
+
+      <label>Системный промпт (инструкция агента)</label>
+      <textarea id="set-prompt" rows="12"></textarea>
+
+      <div class="modal-actions">
+        <button id="settings-cancel" class="btn">Отмена</button>
+        <button id="settings-save" class="btn primary">Сохранить</button>
+      </div>
+      <div id="settings-error" class="error"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
