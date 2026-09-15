@@ -1,7 +1,7 @@
-# Realtor AI Assistant
+# Realtor AI Assistant (Windows)
 
 Локальное веб-приложение с двумя LLM-агентами для работы риелтора. Полностью
-бесплатно: модель работает на вашем MacBook, без платных API-ключей и без
+бесплатно: модель работает на вашем компьютере, без платных API-ключей и без
 отправки данных во внешние сервисы.
 
 - **Агент 1 — «Риелтор»**: ведёт диалог с клиентом, выявляет потребности,
@@ -11,6 +11,9 @@
 - Каждая сессия — отдельный чат с сохранением истории в SQLite.
 - **Инструкции (системные промпты) обоих агентов можно менять прямо в интерфейсе**
   (имя, модель, температуру и сам промпт).
+
+> Это ветка `for-windows`. Файлы `setup.sh` и `run.sh` предназначены для macOS
+> и на Windows не используются — их можно не трогать или удалить.
 
 ---
 
@@ -23,68 +26,69 @@
  FastAPI (server/app.py)  ── SQLite (history, prompts)
         │  OpenAI-совместимый HTTP  POST /v1/chat/completions
         ▼
-  LLM-сервер: llama.cpp `llama-server` (рекомендуется для Intel Mac)
+  LLM-сервер: llama.cpp `llama-server.exe`
               или LM Studio / Ollama
 ```
 
-- Бэкенд: **Python 3 + FastAPI**.
+- Бэкенд: **Python 3 + FastAPI** (без изменений — работает на любой ОС).
 - Фронтенд: статические файлы (`static/`) — без сборки, без Node.js.
 - Модель по умолчанию: **Qwen2.5-7B-Instruct** (GGUF, Q4_K_M, ~4.7 ГБ) —
   свободная модель под лицензией Apache 2.0.
 
 ---
 
-## 2. Требования к MacBook
+## 2. Требования к Windows
 
-Ваша конфигурация (Intel Core i9, 16 ГБ RAM) подходит. Учтите:
-
-- На Intel-маке модель работает **на CPU** (GPU-ускорение Metal доступно только
-  на Apple Silicon). 7B-модель отвечает медленнее, чем на «маках с M1+», но для
-  диалога это комфортно. Если хочется быстрее — поставьте 3B-модель (см. раздел 7).
-- Нужно **~7 ГБ свободного места**: модель ~4.7 ГБ + бинарник llama.cpp + виртуальное окружение.
-- macOS 13.3 (Ventura) или новее — этого требует готовый бинарник llama.cpp.
+- **Windows 10 или 11, 64-бит (x64)**. Процессоры Intel и AMD подходят.
+- Модель работает **на CPU** (7B-модель отвечает не мгновенно, но для диалога
+  комфортно). Если хочется быстрее — поставьте 3B-модель (см. раздел 7).
+- Нужно **~7 ГБ свободного места**: модель ~4.7 ГБ + бинарник llama.cpp +
+  виртуальное окружение Python.
+- **Python 3.10–3.12** (рекомендуется 3.12) с https://www.python.org/downloads/.
+  При установке обязательно отметьте галочку **«Add python.exe to PATH»**.
 - Для первой установки потребуется интернет.
 
 ---
 
 ## 3. Первый запуск (один раз)
 
-Откройте **Терминал** (Terminal) в папке проекта и выполните:
+Самый простой способ — **двойной клик по `setup.bat`** в папке проекта.
 
-```bash
-chmod +x setup.sh run.sh
-./setup.sh
+Либо в PowerShell (в папке проекта):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-`setup.sh` сам:
-1. Проверит/установит Python 3 (через Command Line Tools).
-2. Скачает готовый бинарник `llama-server` (llama.cpp) с GitHub Releases —
-   **Homebrew не нужен** (на Intel-маках Homebrew больше не поддерживается).
-3. Скачает модель `Qwen2.5-7B-Instruct-Q4_K_M.gguf` (~4.7 ГБ) в `~/realtor-ai-app/models/`.
-4. Создаст `server/.env` с настройками.
+`setup.ps1` сам:
+1. Проверит Python (команды `python` или `py`; Microsoft Store-заглушка
+   корректно распознаётся и не считается за настоящий Python).
+2. Скачает готовый бинарник `llama-server.exe` (llama.cpp) с GitHub Releases
+   (сборка `win-cpu-x64`, без установки компиляторов).
+3. Скачает модель `Qwen2.5-7B-Instruct-Q4_K_M.gguf` (~4.7 ГБ) в
+   `%USERPROFILE%\realtor-ai-app\models\` (с докачкой при обрыве).
+4. Создаст `server\.env` с настройками под Windows.
 
-> Если скрипт попросит установить Command Line Tools — нажмите «Установить»,
-> дождитесь окончания и запустите `./setup.sh` ещё раз.
+> Если Python не найден — установите его с https://www.python.org/downloads/
+> (поставьте галочку «Add python.exe to PATH») и запустите `setup.bat` ещё раз.
 
 ---
 
 ## 4. Запуск приложения (каждый раз)
 
-```bash
-./run.sh
-```
+**Двойной клик по `run.bat`** (или в PowerShell — `powershell -NoProfile -ExecutionPolicy Bypass -File .\run.ps1`).
 
 Скрипт сам:
 - создаст/обновит виртуальное окружение `.venv`;
 - установит зависимости из `server/requirements.txt`;
 - загрузит `server/.env`;
-- **автоматически запустит `llama-server` с моделью**, если LLM-сервер не запущен;
+- **автоматически запустит `llama-server.exe` с моделью**, если LLM-сервер не запущен;
 - запустит веб-приложение.
 
 Откройте в браузере: **http://127.0.0.1:8000**
 
-Остановить: в терминале нажмите `Ctrl+C`. Логи `llama-server` пишутся в
-`~/realtor-ai-app/state/llama-server.log`.
+Остановить: закройте окно консоли или нажмите `Ctrl+C`. Логи `llama-server.exe`
+пишутся в `%USERPROFILE%\realtor-ai-app\state\llama-server.log` (и `.err`).
 
 ---
 
@@ -117,7 +121,7 @@ chmod +x setup.sh run.sh
 ### Экспорт / резервная копия
 - Кнопка **«Экспорт данных (JSON)»** внизу слева скачивает полный дамп
   (агенты, промпты, чаты, сообщения).
-- Вся база также лежит в одном файле: `~/realtor-ai-app/state/app.db`.
+- Вся база также лежит в одном файле: `%USERPROFILE%\realtor-ai-app\state\app.db`.
 
 ---
 
@@ -130,10 +134,13 @@ chmod +x setup.sh run.sh
 | `LLM_TIMEOUT` | `600` | Таймаут ответа модели, сек |
 | `REALTOR_MODEL` | `qwen2.5-7b-instruct` | Модель для риелтора |
 | `ANALYST_MODEL` | `qwen2.5-7b-instruct` | Модель для аналитика |
-| `STATE_DIR` | `~/realtor-ai-app/state` | Где хранится база |
-| `LOCAL_GGUF_PATH` | путь до модели | Файл GGUF для автозапуска `llama-server` |
-| `LLAMA_SERVER_PATH` | `~/realtor-ai-app/bin/llama-server` | Путь к бинарнику `llama-server` |
+| `STATE_DIR` | `%USERPROFILE%\realtor-ai-app\state` | Где хранится база |
+| `LOCAL_GGUF_PATH` | путь до модели | Файл GGUF для автозапуска `llama-server.exe` |
+| `LLAMA_SERVER_PATH` | `%USERPROFILE%\realtor-ai-app\bin\llama-server.exe` | Путь к бинарнику |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Адрес веб-интерфейса |
+
+Шаблон лежит в `server/.env.example`. `setup.ps1` создаёт реальный `server/.env`
+автоматически. В значениях с путями используйте обратную косую черту (`\`).
 
 ---
 
@@ -141,18 +148,18 @@ chmod +x setup.sh run.sh
 
 Все модели берутся с Hugging Face бесплатно. Варианты для 16 ГБ RAM:
 
-| Модель | Размер GGUF | Качество | Скорость на Intel Mac |
+| Модель | Размер GGUF | Качество | Скорость на CPU |
 |---|---|---|---|
 | Qwen2.5-7B-Instruct Q4_K_M (по умолчанию) | ~4.7 ГБ | хорошее | средняя |
 | Qwen2.5-3B-Instruct Q4_K_M | ~2.0 ГБ | ниже | быстрая |
 | Qwen2.5-14B-Instruct Q4_K_M | ~9.0 ГБ | выше | медленная (впритык к RAM) |
 
 Чтобы поменять модель:
-1. Скачайте GGUF в `~/realtor-ai-app/models/` (например, с
+1. Скачайте GGUF в `%USERPROFILE%\realtor-ai-app\models\` (например, с
    `https://huggingface.co/bartowski/`).
-2. В `server/.env` укажите новый путь в `LOCAL_GGUF_PATH` и новые имена моделей
-   в `REALTOR_MODEL` / `ANALYST_MODEL` (это значение `--alias` у `llama-server`).
-3. Перезапустите `./run.sh`.
+2. В `server\.env` укажите новый путь в `LOCAL_GGUF_PATH` и новые имена моделей
+   в `REALTOR_MODEL` / `ANALYST_MODEL` (это значение `--alias` у `llama-server.exe`).
+3. Перезапустите `run.bat`.
 
 ---
 
@@ -161,19 +168,22 @@ chmod +x setup.sh run.sh
 Приложение работает с любым OpenAI-совместимым сервером — достаточно указать
 `LLM_BASE_URL` и `LLM_API_KEY` в `server/.env`.
 
-**LM Studio** (GUI-приложение):
+**LM Studio** (GUI-приложение для Windows):
 1. Скачайте модель Qwen в формате GGUF внутри LM Studio, загрузите её.
 2. Включите **Developer → Local Server** (порт 1234).
 3. `LLM_BASE_URL=http://127.0.0.1:1234/v1`, модель — та, что показывает LM Studio
    (обычно `qwen/qwen2.5-7b-instruct`).
 
-**Ollama** (только Apple Silicon, на Intel Mac не поддерживается):
-```bash
+**Ollama** (на Windows поддерживается):
+```powershell
 # установщик с https://ollama.com/download, затем:
 ollama pull qwen2.5:7b-instruct
 ollama serve
 ```
 `LLM_BASE_URL=http://127.0.0.1:11434/v1`, модель `qwen2.5:7b-instruct`.
+
+> Если вы используете LM Studio или Ollama, `run.bat` увидит работающий
+> LLM-сервер и **не будет** запускать собственный `llama-server.exe`.
 
 ---
 
@@ -181,27 +191,28 @@ ollama serve
 
 | Симптом | Причина / решение |
 |---|---|
-| «LLM недоступен» в статусе слева | LLM-сервер не запущен. Запустите `./run.sh` (он сам поднимет `llama-server`) или проверьте `curl http://127.0.0.1:8080/v1/models` |
+| «LLM недоступен» в статусе слева | LLM-сервер не запущен. Запустите `run.bat` (он сам поднимет `llama-server.exe`) или проверьте `curl.exe http://127.0.0.1:8080/v1/models` |
 | Ошибка `model not found` | Имя модели в `server/.env` не совпадает с `--alias` / id модели на сервере |
 | Ответы идут очень долго | Это нормально для CPU. Уменьшите `LLM_CTX_SIZE` (напр. 4096) или возьмите 3B-модель |
 | Порт 8000 занят | Поменяйте `PORT` в `server/.env` |
-| `ensurepip is not available` при первом запуске | Системный Python не умеет создавать venv. Установите Python 3.12 с https://www.python.org/downloads/ (установщик для macOS) и запустите `./setup.sh` ещё раз |
-| `Homebrew on macOS is only supported on Apple Silicon` | Ожидаемо на Intel-маке — Homebrew больше не поддерживает Intel. Скрипт уже не использует Homebrew: запустите обновлённый `./setup.sh` |
-| `llama-server` не запускается / `Bad CPU type` / «несовместимо с этой версией macOS» | macOS старее 13.3 (Ventura). Обновите macOS или соберите llama.cpp из исходников (ссылка есть в сообщении `setup.sh`) |
-| `bash: ./run.sh: bad interpreter` | Файл скрипта пересохранён с Windows-переводами строк. Выполните в проекте `sed -i '' 's/\r$//' run.sh setup.sh` (на macOS) |
-| Хочу посмотреть логи модели | `tail -f ~/realtor-ai-app/state/llama-server.log` |
+| Брандмауэр Windows спрашивает разрешение при первом запуске | Разрешите доступ для «частных сетей» (приложение слушает только `127.0.0.1`) |
+| «Выполнение сценариев отключено в этой системе» | Запускайте через `run.bat` (он передаёт `-ExecutionPolicy Bypass`), либо выполните в PowerShell: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| Windows SmartScreen блокирует `llama-server.exe` | Снимите блокировку: ПКМ по файлу → Свойства → галочка «Разблокировать» (setup.ps1 снимает её автоматически) |
+| `ensurepip is not available` | Системный Python не умеет создавать venv. Установите Python 3.12 с https://www.python.org/downloads/ и запустите `setup.bat` ещё раз |
+| Хочу посмотреть логи модели | `Get-Content "$env:USERPROFILE\realtor-ai-app\state\llama-server.log" -Wait` |
 
-Проверка API вручную:
-```bash
-curl http://127.0.0.1:8000/api/health
+Проверка API вручную (PowerShell):
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
 ---
 
 ## 10. Воспроизводимость
 
-- Все настройки и история — в одном файле `~/realtor-ai-app/state/app.db`.
+- Все настройки и история — в одном файле `%USERPROFILE%\realtor-ai-app\state\app.db`.
 - Промпты агентов редактируются в UI и хранятся в той же базе.
-- Полный дамп: `curl http://127.0.0.1:8000/api/export`.
-- Для переноса на другой Mac: скопируйте папку проекта + `~/realtor-ai-app/`
-  (модель и база), запустите `./setup.sh` и `./run.sh`.
+- Полный дамп: `Invoke-RestMethod http://127.0.0.1:8000/api/export`.
+- Для переноса на другой компьютер: скопируйте папку проекта +
+  `%USERPROFILE%\realtor-ai-app\` (модель и база), запустите `setup.bat` и `run.bat`.
