@@ -55,6 +55,90 @@ function Invoke-NativeSilent {
     }
 }
 
+# Hugging Face / GitHub can reset large downloads on Windows (curl exit 52,
+# "empty reply from server"). A real browser User-Agent, forced IPv4 and
+# HTTP/1.1 avoid the most common causes (HTTP/2 resets, broken IPv6 routes).
+$CurlUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
+
+# Download a file with resumable retries. Progress is never lost: once a
+# partial file exists, --continue-at - resumes it on the next attempt.
+function Download-File {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$OutFile,
+        [long]$ExpectedSize = 0,
+        [int]$MaxAttempts = 10,
+        [int]$DelaySeconds = 5
+    )
+
+    $dir = Split-Path -Parent $OutFile
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    }
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $curlArgs = @('-L', '--fail', '-4', '--http1.1', '-A', $CurlUserAgent,
+                      '--connect-timeout', '20', '-sS')
+        if (Test-Path -LiteralPath $OutFile) { $curlArgs += @('--continue-at', '-') }
+        $curlArgs += @('--output', $OutFile, $Url)
+
+        Write-Host ("    Попытка {0}/{1}…" -f $attempt, $MaxAttempts)
+        $code = Invoke-Native curl.exe @curlArgs
+
+        $actual = 0
+        if (Test-Path -LiteralPath $OutFile) {
+            $actual = (Get-Item -LiteralPath $OutFile).Length
+        }
+
+        if ($code -eq 0) {
+            if ($ExpectedSize -gt 0 -and $actual -ne $ExpectedSize) {
+                Write-Host ("    Размер файла не совпал: {0:N0} вместо {1:N0}. Повторяю…" -f $actual, $ExpectedSize) -ForegroundColor Yellow
+                Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+            }
+            else {
+                return
+            }
+        }
+        elseif ($code -eq 33) {
+            # HTTP range not satisfiable: the file is already fully downloaded.
+            if ($ExpectedSize -gt 0 -and $actual -ne $ExpectedSize) {
+                Write-Host "    Частичный файл не удаётся докачать. Начинаю заново…" -ForegroundColor Yellow
+                Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+            }
+            else {
+                return
+            }
+        }
+
+        Write-Host ("    Ошибка загрузки (код {0}). Пробую снова через {1} с…" -f $code, $DelaySeconds) -ForegroundColor Yellow
+        if ($attempt -lt $MaxAttempts) { Start-Sleep -Seconds $DelaySeconds }
+    }
+
+    Write-Host ("ОШИБКА: не удалось скачать файл после {0} попыток: {1}" -f $MaxAttempts, $Url) -ForegroundColor Red
+    Write-Host 'Проверьте интернет-соединение, отключите VPN/прокси и запустите setup.bat ещё раз.' -ForegroundColor Red
+    exit 1
+}
+
+# Fetch the final Content-Length (follows redirects) so we can verify a download.
+function Get-ContentLength {
+    param([Parameter(Mandatory = $true)][string]$Url)
+
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+        $headers = & curl.exe -4 -L --http1.1 -A $CurlUserAgent --connect-timeout 20 --max-time 60 -sS -I $Url 2>$null
+        foreach ($line in $headers) {
+            if ($line -match '^content-length:\s*(\d+)') {
+                return [long]$Matches[1]
+            }
+        }
+    }
+    finally {
+        $ErrorActionPreference = $prev
+    }
+    return 0
+}
+
 $ProjectRoot = $PSScriptRoot
 $AppRoot     = Join-Path $env:USERPROFILE 'realtor-ai-app'
 $LlamaDir    = Join-Path $AppRoot 'bin'
@@ -155,10 +239,7 @@ else {
     Write-Host "    $url"
 
     $zipPath = Join-Path $LlamaDir 'llama.zip'
-    if ((Invoke-Native curl.exe -L --fail --retry 3 --output $zipPath $url) -ne 0) {
-        Write-Host 'ОШИБКА: не удалось скачать бинарник llama.cpp.' -ForegroundColor Red
-        exit 1
-    }
+    Download-File -Url $url -OutFile $zipPath
 
     Expand-Archive -Path $zipPath -DestinationPath $LlamaDir -Force
     Remove-Item -Path $zipPath -Force
@@ -197,11 +278,13 @@ else {
     Write-Host ''
     Write-Host '==> Скачиваю Qwen2.5-7B-Instruct (Q4_K_M, ~4.7 ГБ)…'
     Write-Host '    Это займёт время в зависимости от скорости сети.'
-    if ((Invoke-Native curl.exe -L --fail --retry 3 --continue-at - --output $ModelPath $ModelUrl) -ne 0) {
-        Write-Host 'ОШИБКА: не удалось скачать модель.' -ForegroundColor Red
-        Write-Host 'Можно повторить — загрузка продолжится с места остановки.' -ForegroundColor Red
-        exit 1
+
+    $expectedSize = Get-ContentLength -Url $ModelUrl
+    if ($expectedSize -gt 0) {
+        Write-Host ("    Ожидаемый размер: {0:N0} байт (~{1:N1} ГБ)" -f $expectedSize, ($expectedSize / 1GB))
     }
+
+    Download-File -Url $ModelUrl -OutFile $ModelPath -ExpectedSize $expectedSize
     Write-Host "==> Модель сохранена: $ModelPath"
 }
 
